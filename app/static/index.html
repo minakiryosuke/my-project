@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>不動産サポートアプリ</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    section { margin-bottom: 2rem; }
+    form { margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>不動産サポートアプリ</h1>
+  <section id="professionals">
+    <h2>専門家一覧</h2>
+    <ul id="pro-list"></ul>
+  </section>
+  <section id="columns">
+    <h2>コラム</h2>
+    <ul id="column-list"></ul>
+  </section>
+  <section id="communities">
+    <h2>コミュニティ</h2>
+    <ul id="community-list"></ul>
+  </section>
+
+  <script>
+  async function loadData() {
+    const proRes = await fetch('/professionals');
+    const professionals = await proRes.json();
+    const proList = document.getElementById('pro-list');
+    professionals.forEach(pro => {
+      const li = document.createElement('li');
+      li.textContent = `${pro.name} (${pro.profession}) 評価: ${pro.rating}`;
+      const form = document.createElement('form');
+      form.innerHTML = `
+        <input name="name" placeholder="お名前" required />
+        <input name="time" type="datetime-local" required />
+        <button type="submit">予約</button>
+      `;
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = form.querySelector('input[name="name"]').value;
+        const time = form.querySelector('input[name="time"]').value;
+        await fetch(`/professionals/${pro.id}/appointments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ client_name: name, scheduled_time: time })
+        });
+        alert('予約しました');
+        form.reset();
+      });
+      li.appendChild(form);
+      proList.appendChild(li);
+    });
+
+    const colRes = await fetch('/columns');
+    const columns = await colRes.json();
+    const colList = document.getElementById('column-list');
+    columns.forEach(col => {
+      const li = document.createElement('li');
+      li.textContent = col.title;
+      colList.appendChild(li);
+    });
+
+    const commRes = await fetch('/communities');
+    const communities = await commRes.json();
+    const commList = document.getElementById('community-list');
+    communities.forEach(comm => {
+      const li = document.createElement('li');
+      li.innerHTML = `<strong>${comm.name}</strong>: ${comm.description}`;
+      const form = document.createElement('form');
+      form.innerHTML = `
+        <input name="message" placeholder="メッセージ" required />
+        <button type="submit">投稿</button>
+      `;
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const msg = form.querySelector('input[name="message"]').value;
+        await fetch(`/communities/${comm.id}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: msg })
+        });
+        alert('投稿しました');
+        form.reset();
+      });
+      li.appendChild(form);
+      commList.appendChild(li);
+    });
+  }
+
+  loadData();
+  </script>
+</body>
+</html>

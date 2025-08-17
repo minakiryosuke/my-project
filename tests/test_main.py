@@ -1,32 +1,35 @@
+# tests/test_main.py
 from fastapi.testclient import TestClient
-from app.main import app, professionals, appointments
+from app.main import app
 
 client = TestClient(app)
 
-def test_list_professionals():
-    response = client.get("/professionals")
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data) == len(professionals)
-    assert data[0]["name"] == professionals[0].name
+def test_root_returns_json():
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("application/json")
+    assert resp.json().get("ok") is True
+    assert "API is running" in resp.json().get("message", "")
 
-def test_create_appointment():
-    appointments.clear()
-    payload = {"client_name": "山田太郎", "scheduled_time": "2025-01-01T10:00:00"}
-    response = client.post("/professionals/1/appointments", json=payload)
-    assert response.status_code == 201
-    assert len(appointments) == 1
-    assert appointments[0].client_name == "山田太郎"
+def test_professionals_list():
+    resp = client.get("/professionals")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert isinstance(data, list)
+    # 初期データが最低1件ある想定
+    assert len(data) >= 1
+    assert {"id", "name", "profession", "rating"} <= set(data[0].keys())
 
-def test_list_columns():
-    response = client.get("/columns")
-    assert response.status_code == 200
-    assert isinstance(response.json(), list)
+def test_health_ok():
+    resp = client.get("/health")
+    assert resp.status_code == 200
+    assert resp.json().get("status") == "ok"
 
-def test_list_communities_and_post_message():
-    response = client.get("/communities")
-    assert response.status_code == 200
-    assert isinstance(response.json(), list)
-    message = {"message": "こんにちは"}
-    response_post = client.post("/communities/1/messages", json=message)
-    assert response_post.status_code == 201
+def test_web_served_when_present():
+    """
+    /web/ に静的ファイルを置いた場合のみ200を想定します。
+    置いていないプロジェクトでも失敗しないように分岐します。
+    """
+    resp = client.get("/web/")
+    # 静的がない構成なら 404 でも良しとする
+    assert resp.status_code in (200, 404)

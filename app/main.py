@@ -1,24 +1,32 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 from typing import List
 from datetime import datetime
+from pathlib import Path
 
-# 1) ここを先に置く
 app = FastAPI(title="Real Estate Support API")
-from fastapi.middleware.cors import CORSMiddleware
 
+# GitHub Pages からのアクセスを許可（必要に応じて追加）
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://minakiryosuke.github.io"],  # ← あなたのGitHub PagesのURL
+    allow_origins=["https://minakiryosuke.github.io"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# 2) その後にルート（エンドポイント）を定義
+# 入口（APIの状態確認用）
 @app.get("/")
 def home():
     return {"ok": True, "message": "API is running"}
 
+# （任意）Render のヘルスチェック用
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+# ---------- データモデル ----------
 class Professional(BaseModel):
     id: int
     name: str
@@ -39,8 +47,10 @@ class Community(BaseModel):
     id: int
     name: str
     description: str
-    messages: List[str] = []
+    # 空リストの共有事故を避ける
+    messages: List[str] = Field(default_factory=list)
 
+# ---------- 仮のデータ ----------
 professionals = [
     Professional(id=1, name="田中不動産", profession="Real Estate Agent", rating=4.5),
     Professional(id=2, name="佐藤税理士", profession="Tax Advisor", rating=4.7),
@@ -58,6 +68,7 @@ communities = [
 
 appointments: List[Appointment] = []
 
+# ---------- エンドポイント ----------
 @app.get("/professionals", response_model=List[Professional])
 def list_professionals():
     return professionals
@@ -71,7 +82,11 @@ def create_appointment(professional_id: int, request: AppointmentRequest):
     professional = next((p for p in professionals if p.id == professional_id), None)
     if not professional:
         raise HTTPException(status_code=404, detail="Professional not found")
-    appointment = Appointment(professional_id=professional_id, client_name=request.client_name, scheduled_time=request.scheduled_time)
+    appointment = Appointment(
+        professional_id=professional_id,
+        client_name=request.client_name,
+        scheduled_time=request.scheduled_time
+    )
     appointments.append(appointment)
     return appointment
 
@@ -93,3 +108,8 @@ def post_message(community_id: int, request: MessageRequest):
         raise HTTPException(status_code=404, detail="Community not found")
     community.messages.append(request.message)
     return {"status": "ok", "community_id": community_id, "message": request.message}
+
+# ---------- 静的ファイル（任意・共存のため /web に配置） ----------
+# Render 側で /app/static 配下にファイルを置けば /web で配信されます。
+BASE_DIR = Path(__file__).resolve().parent
+(app.mount("/web", StaticFiles(directory=BASE_DIR / "static", html=True), name="static"))
