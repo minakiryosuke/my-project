@@ -2,6 +2,9 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List
 from datetime import datetime
+@app.get("/")
+def home():
+    return {"ok": True, "message": "API is running"}
 
 app = FastAPI(title="Real Estate Support API")
 
