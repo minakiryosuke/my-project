@@ -12,7 +12,9 @@ This project provides a simple FastAPI server that offers basic support function
    ```
    pip install -r requirements.txt
    ```
+ codex/create-real-estate-support-app-3yjtfc
 2. Run the server and open the demo site at http://localhost:8000:
+
    ```
    uvicorn app.main:app --reload
    ```

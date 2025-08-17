@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>不動産サポートアプリ（フロント）</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 24px; line-height: 1.6; }
+    h1 { margin-bottom: 8px; }
+    button, input, select { padding: 8px; margin: 4px 0; }
+    .card { border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin: 10px 0; }
+    pre { background:#f7f7f7; padding:12px; overflow:auto; }
+  </style>
+</head>
+<body>
+  <h1>不動産サポートアプリ（フロント）</h1>
+  <p>下のボタンで Render 上のAPIを呼びます。</p>
+
+  <section class="card">
+    <h2>① API 動作確認（/ ルート）</h2>
+    <button id="btnRoot">/ を呼ぶ</button>
+    <pre id="outRoot">ここに結果が表示されます</pre>
+  </section>
+
+  <section class="card">
+    <h2>② 専門家一覧を取得（GET /professionals）</h2>
+    <button id="btnPros">一覧取得</button>
+    <div id="pros"></div>
+  </section>
+
+  <section class="card">
+    <h2>③ 予約を作成（POST /professionals/{id}/appointments）</h2>
+    <label>専門家ID: <input id="proId" type="number" value="1" /></label><br />
+    <label>あなたの名前: <input id="clientName" type="text" placeholder="山田太郎" /></label><br />
+    <label>予約日時(ISO形式): 
+      <input id="dt" type="datetime-local" />
+      <small>（例: 2025-08-20 14:00）</small>
+    </label><br />
+    <button id="btnBook">予約を送信</button>
+    <pre id="outBook">ここに結果が表示されます</pre>
+  </section>
+
+  <script>
+    // ←↓↓ ここをあなたの Render のURLに置き換えてください（末尾スラッシュなし）
+    const API_BASE = "https://my-project-cdre.onrender.com";
+
+    // ユーティリティ
+    async function call(url, options={}) {
+      try {
+        const res = await fetch(url, options);
+        const text = await res.text();
+        return { ok: res.ok, status: res.status, text };
+      } catch (e) {
+        return { ok:false, status:0, text:String(e) };
+      }
+    }
+
+    // ① ルート
+    document.getElementById('btnRoot').onclick = async () => {
+      const r = await call(`${API_BASE}/`);
+      document.getElementById('outRoot').textContent = `${r.status}\n${r.text}`;
+    };
+
+    // ② /professionals 一覧
+    document.getElementById('btnPros').onclick = async () => {
+      const r = await call(`${API_BASE}/professionals`);
+      if (!r.ok) {
+        document.getElementById('pros').innerHTML = `<pre>${r.status}\n${r.text}</pre>`;
+        return;
+      }
+      const data = JSON.parse(r.text);
+      // 表示を作る
+      const html = data.map(p => `
+        <div class="card">
+          <strong>${p.name}</strong><br/>
+          職種: ${p.profession} / 評価: ${p.rating}
+        </div>
+      `).join("");
+      document.getElementById('pros').innerHTML = html || "データなし";
+    };
+
+    // ③ 予約POST
+    document.getElementById('btnBook').onclick = async () => {
+      const proId = Number(document.getElementById('proId').value);
+      const client = document.getElementById('clientName').value.trim();
+      const dtLocal = document.getElementById('dt').value; // yyyy-mm-ddThh:mm
+      if (!proId || !client || !dtLocal) {
+        document.getElementById('outBook').textContent = "ID/名前/日時を入力してください";
+        return;
+      }
+      // datetime-local はタイムゾーンなしなので、簡易的にそのまま送る
+      const payload = { client_name: client, scheduled_time: dtLocal };
+
+      const r = await call(`${API_BASE}/professionals/${proId}/appointments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      document.getElementById('outBook').textContent = `${r.status}\n${r.text}`;
+    };
+  </script>
+</body>
+</html>
