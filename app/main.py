@@ -5,6 +5,14 @@ from datetime import datetime
 
 # 1) ここを先に置く
 app = FastAPI(title="Real Estate Support API")
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://minakiryosuke.github.io"],  # ← あなたのGitHub PagesのURL
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # 2) その後にルート（エンドポイント）を定義
 @app.get("/")
