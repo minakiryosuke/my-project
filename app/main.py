@@ -2,11 +2,14 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List
 from datetime import datetime
+
+# 1) ここを先に置く
+app = FastAPI(title="Real Estate Support API")
+
+# 2) その後にルート（エンドポイント）を定義
 @app.get("/")
 def home():
     return {"ok": True, "message": "API is running"}
-
-app = FastAPI(title="Real Estate Support API")
 
 class Professional(BaseModel):
     id: int
